@@ -15,6 +15,7 @@ import type { AwsCredentialIdentity } from '@aws-sdk/types';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import { extractCredentials, isUrlFromBucket } from './utils';
+import { Agent } from 'https';
 
 export interface File {
   name: string;
@@ -50,6 +51,15 @@ export interface AWSParams {
   signedUrlExpires?: number;
 }
 
+export interface AWSHTTPOptions {
+  proxy?: string; // making it required
+  connectTimeout?: number;
+  timeout?: number;
+  xhrAsync?: boolean;
+  xhrWithCredentials?: boolean;
+  verifySSL?: boolean;
+}
+
 export interface DefaultOptions extends S3ClientConfig {
   // TODO Remove this in V5
   accessKeyId?: AwsCredentialIdentity['accessKeyId'];
@@ -57,6 +67,7 @@ export interface DefaultOptions extends S3ClientConfig {
   // Keep this for V5
   credentials?: AwsCredentialIdentity;
   params?: AWSParams;
+  httpOptions?: AWSHTTPOptions;
   [k: string]: any;
 }
 
@@ -83,6 +94,11 @@ const getConfig = ({ baseUrl, rootPath, s3Options, ...legacyS3Options }: InitOpt
     ...legacyS3Options,
     ...(credentials ? { credentials } : {}),
   };
+  if(s3Options?.httpOptions){
+    config.httpOptions.agent = new Agent({
+      rejectUnauthorized: false,
+    })
+  }
 
   config.params.ACL = getOr(ObjectCannedACL.public_read, ['params', 'ACL'], config);
 
